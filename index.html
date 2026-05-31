@@ -584,7 +584,7 @@ async function renderDash() {
       ? _tenants.map(function(t) {
           var p = pm[t.id];
           var prop = _props.find(function(x){return x.id===t.property_id;});
-          var cb = (p && p.status==="pending") ? '<button class="btn btn-gold btn-sm" style="margin-top:5px;padding:5px 10px;font-size:11px" onclick="confPay(''+p.id+'')">Confirm</button>' : "";
+          var cb = (p && p.status==="pending") ? ('<button class="btn btn-gold btn-sm" style="margin-top:5px;padding:5px 10px;font-size:11px" onclick="confPay(this.dataset.id)" data-id="'+p.id+'">Confirm</button>') : "";
           var status = !p ? '<span class="pill pr">&#x23F3; Pending</span>' : p.status==="confirmed" ? '<span class="pill pg">&#x2705; Paid</span>' : '<span class="pill pgold">&#x1F514; Verify</span>';
           return '<div class="lr"><div class="lic" style="background:#eef4fb;color:#2d6a9f">'+t.name[0]+'</div><div class="lii"><div class="lit">'+t.name+'</div><div class="lis">'+(t.flat_type||"")+" \u00b7 "+(prop ? prop.name : "")+'</div>'+cb+'</div><div class="lir"><div class="lia">'+fI(t.rent)+'</div><div style="margin-top:3px">'+status+'</div></div></div>';
         }).join("")
@@ -667,9 +667,14 @@ function oTab(tab) {
 async function confPay(pid) {
   try {
     await api("/rest/v1/rent_payments?id=eq."+pid, {method:"PATCH", body:JSON.stringify({status:"confirmed", confirmed_at:new Date().toISOString()})});
-    toast("Payment confirmed!"); renderDash();
+    toast("Payment confirmed!"); await renderDash();
   } catch(e) { toast("Error: "+e.message); }
 }
+document.addEventListener("click", function(e){
+  if (e.target && e.target.dataset && e.target.dataset.id && e.target.textContent.trim()==="Confirm") {
+    confPay(e.target.dataset.id);
+  }
+});
 
 async function genMsgs(type) {
   var ym=cYM(), mn=fM(ym), w=document.getElementById("o-msgs");
