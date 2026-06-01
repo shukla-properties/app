@@ -614,7 +614,7 @@ function rTenants() {
     if (!tn.length) return;
     w.innerHTML += '<div class="sh">'+p.name+'</div>';
     w.innerHTML += tn.map(function(t){
-      return '<div class="card" style="display:flex;align-items:center;gap:11px;padding:13px;margin-bottom:8px"><div style="width:40px;height:40px;border-radius:12px;background:#eef4fb;color:#2d6a9f;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;flex-shrink:0;font-family:Playfair Display,serif">'+t.name[0]+'</div><div style="flex:1"><div style="font-size:13px;font-weight:700">'+t.name+'</div><div style="font-size:11px;color:var(--ink3)">'+(t.flat_type||"")+" \u00b7 "+(t.floor||"")+" \u00b7 &#x1F4DE; "+(t.phone||"&#x2014;")+'</div><div style="margin-top:4px;display:flex;gap:5px;flex-wrap:wrap">'+(t.deposit?'<span class="pill pgray">Dep: '+fI(t.deposit)+'</span>':'')+(t.maintenance?'<span class="pill pb">+\u20b9'+t.maintenance+' maint</span>':'')+(t.agreement_end?'<span class="pill '+(dT(t.agreement_end)<=30?"pr":"pg")+'">'+dT(t.agreement_end)+'d left</span>':'')+'</div></div><div style="font-family:Playfair Display,serif;font-size:17px;color:var(--green);flex-shrink:0">'+fI(t.rent)+'</div></div>';
+      return '<div class="card" style="padding:13px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:11px"><div style="width:40px;height:40px;border-radius:12px;background:#eef4fb;color:#2d6a9f;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;flex-shrink:0;font-family:Playfair Display,serif">'+t.name[0]+'</div><div style="flex:1"><div style="font-size:13px;font-weight:700">'+t.name+'</div><div style="font-size:11px;color:var(--ink3)">'+(t.flat_type||"")+" \u00b7 "+(t.floor||"")+" \u00b7 &#x1F4DE; "+(t.phone||"&#x2014;")+'</div><div style="margin-top:4px;display:flex;gap:5px;flex-wrap:wrap">'+(t.deposit?'<span class="pill pgray">Dep: '+fI(t.deposit)+'</span>':'')+(t.maintenance?'<span class="pill pb">+\u20b9'+t.maintenance+' maint</span>':'')+(t.agreement_end?'<span class="pill '+(dT(t.agreement_end)<=30?"pr":"pg")+'">'+dT(t.agreement_end)+'d left</span>':'')+'</div></div><div style="font-family:Playfair Display,serif;font-size:17px;color:var(--green);flex-shrink:0">'+fI(t.rent)+'</div></div><div style="display:flex;gap:8px;margin-top:12px;border-top:1px solid var(--bdr);padding-top:10px"><button class="btn btn-out btn-sm" style="flex:1" onclick="editTenant(''+t.id+'')">&#x270F;&#xFE0F; Edit</button><button class="btn btn-sm" style="flex:1;background:var(--red-lt);color:var(--red);border:1px solid rgba(192,57,43,0.2)" onclick="deleteTenant(''+t.id+'',''+t.name+'')">&#x1F5D1;&#xFE0F; Remove</button></div></div>';
     }).join("");
   });
 }
@@ -661,6 +661,67 @@ function oTab(tab) {
   if (tab==="elec") rElec();
   if (tab==="pnl") rPnL();
   if (tab==="msg") genMsgs("rent");
+}
+
+async function deleteTenant(tid, name) {
+  if (!confirm("Remove " + name + " from your property? This cannot be undone.")) return;
+  try {
+    await api("/rest/v1/tenants?id=eq."+tid, {method:"PATCH", body:JSON.stringify({is_active:false})});
+    toast("Tenant removed successfully");
+    await renderOwner();
+  } catch(e) { toast("Error: "+e.message); }
+}
+
+async function editTenant(tid) {
+  var t = _tenants.find(function(x){return x.id===tid;});
+  if (!t) return;
+  // Pre-fill add tenant modal with existing data for editing
+  showAddTenant();
+  document.getElementById("t-ps").value = t.property_id;
+  document.getElementById("tn2").value = t.name;
+  document.getElementById("tph").value = t.phone || "";
+  document.getElementById("tem").value = t.email || "";
+  document.getElementById("tft").value = t.flat_type || "1 BHK";
+  document.getElementById("tfl").value = t.floor || "";
+  document.getElementById("tr").value = t.rent || "";
+  document.getElementById("tm").value = t.maintenance || "";
+  document.getElementById("td").value = t.deposit || "";
+  document.getElementById("tme").value = t.meter_number || "";
+  document.getElementById("tmi").value = t.move_in_date || "";
+  document.getElementById("tae").value = t.agreement_end || "";
+  // Change save button to update
+  document.getElementById("t-sb").textContent = "&#x1F4BE; Update Tenant";
+  document.getElementById("t-sb").onclick = function(){updateTenant(tid);};
+}
+
+async function updateTenant(tid) {
+  var r = +document.getElementById("tr").value;
+  if (!r) { toast("Rent amount required"); return; }
+  document.getElementById("t-sb").style.display="none";
+  document.getElementById("t-sav").style.display="flex";
+  try {
+    await api("/rest/v1/tenants?id=eq."+tid, {method:"PATCH", body:JSON.stringify({
+      name: document.getElementById("tn2").value.trim(),
+      phone: document.getElementById("tph").value.trim(),
+      flat_type: document.getElementById("tft").value,
+      floor: document.getElementById("tfl").value,
+      rent: r,
+      maintenance: +document.getElementById("tm").value||0,
+      deposit: +document.getElementById("td").value||0,
+      meter_number: document.getElementById("tme").value,
+      move_in_date: document.getElementById("tmi").value||null,
+      agreement_end: document.getElementById("tae").value||null
+    })});
+    closeModal("mt");
+    toast("Tenant updated!");
+    await renderOwner();
+  } catch(e) { toast("Error: "+e.message); }
+  finally {
+    document.getElementById("t-sb").style.display="flex";
+    document.getElementById("t-sav").style.display="none";
+    document.getElementById("t-sb").textContent = "&#x1F4BE; Add Tenant";
+    document.getElementById("t-sb").onclick = saveTenant;
+  }
 }
 
 async function confPay(pid) {
