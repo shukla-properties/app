@@ -242,8 +242,7 @@ body{font-family:"Nunito",sans-serif;background:var(--bg);color:var(--ink);min-h
     <div class="otab" id="ot-msg">
       <div class="ac">
         <div class="btn-row" style="margin-bottom:14px">
-          <button class="btn btn-gold btn-sm" id="btn-rent-msg">&#x1F3E0; Rent</button>
-          <button class="btn btn-out btn-sm" id="btn-elec-msg">&#x26A1; Electric</button>
+          <button class="btn btn-gold btn-sm" id="btn-rent-msg">&#x1F4CB; Send Bill</button>
           <button class="btn btn-out btn-sm" id="btn-rcpt-msg">&#x2705; Receipts</button>
         </div>
         <div id="o-msgs"></div>
@@ -565,7 +564,7 @@ async function renderOwner() {
 async function renderDash() {
   var ym = cYM();
   try {
-    var pays = await api("/rest/v1/rent_payments?owner_id=eq."+_u.id+"&month=eq."+ym+"&select=*") || [];
+    var pays = await api("/rest/v1/rent_payments?month=eq."+ym+"&select=*") || [];
     var pm = {};
     pays.forEach(function(p){pm[p.tenant_id]=p;});
     var rec = pays.filter(function(p){return p.status==="confirmed";}).reduce(function(s,p){return s+p.amount;}, 0);
@@ -688,9 +687,19 @@ async function genMsgs(type) {
     var pids = new Set(pays.map(function(p){return p.tenant_id;}));
     var rm = {}; reads.forEach(function(r){rm[r.tenant_id]=r;});
     var msgs = [];
-    if (type==="rent") msgs = _tenants.filter(function(t){return !pids.has(t.id)&&t.rent>0;}).map(function(t){return {name:t.name,phone:t.phone,msg:bRent(t,mn)};});
-    else if (type==="elec") msgs = _tenants.filter(function(t){return rm[t.id];}).map(function(t){return {name:t.name,phone:t.phone,msg:bElec(t,rm[t.id],mn)};});
-    else msgs = _tenants.filter(function(t){return pids.has(t.id);}).map(function(t){var p=pays.find(function(x){return x.tenant_id===t.id;});return {name:t.name,phone:t.phone,msg:"\u2705 *RECEIPT \u2013 "+mn.toUpperCase()+"*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\u1F464 "+t.name+"\n\u1F4B0 "+fI((p&&p.amount)||t.rent)+"\n\u1F4B3 "+((p&&p.payment_mode)||"UPI")+"\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\nThank you! \u1F64F\n*Rentro*"};});
+    if (type==="bill") {
+      msgs = _tenants.filter(function(t){return !pids.has(t.id)&&t.rent>0;}).map(function(t){
+        var r=rm[t.id];
+        return {name:t.name,phone:t.phone,msg:bBill(t,r,mn)};
+      });
+    } else {
+      msgs = _tenants.filter(function(t){return pids.has(t.id);}).map(function(t){
+        var p=pays.find(function(x){return x.tenant_id===t.id;});
+        var r=rm[t.id];
+        var total=(t.rent||0)+(r&&r.amount||0)+(t.maintenance||0);
+        return {name:t.name,phone:t.phone,msg:"\u2705 *RECEIPT \u2013 "+mn.toUpperCase()+"*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83D\uDC64 "+t.name+"\n\uD83C\uDFE0 "+(t.flat_type||"")+" \u00b7 "+(t.floor||"")+"\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83C\uDFE0 Rent: "+fI(t.rent||0)+(r?"\n\u26A1 Electricity: "+fI(r.amount):"")+(t.maintenance?"\n\uD83D\uDD27 Maintenance: "+fI(t.maintenance):"")+"\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83D\uDCB0 *TOTAL: "+fI(p&&p.amount||total)+"*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83D\uDCB3 "+((p&&p.payment_mode)||"UPI")+"\nThank you! \uD83D\uDE4F\n*Rentro*"};
+      });
+    }
     if (!msgs.length) { w.innerHTML="<div class='empty'><div class='eico'>&#x1F4AC;</div>No messages for this category</div>"; return; }
     w.innerHTML = '<div class="alert ai" style="margin-bottom:12px"><span class="aicon">&#x1F4F2;</span><div class="abody">Tap <strong>Send on WhatsApp</strong> &#x2014; opens with message ready!</div></div>'
       + msgs.map(function(m){
@@ -700,6 +709,14 @@ async function genMsgs(type) {
   } catch(e) { w.innerHTML="<div class='empty'>Error: "+e.message+"</div>"; }
 }
 
+function bBill(t,r,mn){
+  var prop = _props.find(function(p){return p.id===t.property_id;});
+  var pname = prop ? prop.name : "";
+  var elecLine = r ? ("\n\u26A1 Electricity:   "+fI(r.amount)+"\n   ("+r.opening_reading+"\u2192"+r.closing_reading+", "+r.units+"u @\u20b9"+RATE+")") : "";
+  var maintLine = t.maintenance ? ("\n\uD83D\uDD27 Maintenance:   "+fI(t.maintenance)) : "";
+  var total = (t.rent||0) + (r&&r.amount||0) + (t.maintenance||0);
+  return "\uD83D\uDCCB *MONTHLY BILL \u2013 "+mn.toUpperCase()+"*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83C\uDFE2 "+pname+"\n\uD83D\uDC64 "+t.name+"\n\uD83C\uDFE0 "+(t.flat_type||"")+" \u00b7 "+(t.floor||"")+"\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83C\uDFE0 Rent:          "+fI(t.rent||0)+elecLine+maintLine+"\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83D\uDCB0 *TOTAL DUE: "+fI(total)+"*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\nPay via UPI by 5th. \uD83D\uDE4F\n*Rentro*";
+}
 function bRent(t,mn){return "\uD83C\uDFE0 *RENT REMINDER \u2013 "+mn.toUpperCase()+"*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83D\uDC64 *"+t.name+"*\n\uD83C\uDFE0 "+(t.flat_type||"")+" \u00B7 "+(t.floor||"")+"\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83D\uDCC5 Due: 5th "+mn+"\n\uD83D\uDCB0 *Rent: "+fI(t.rent)+"*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\nKindly pay via UPI. \uD83D\uDE4F\n*Rentro*";}
 function bElec(t,r,mn){var tot=(t.rent||0)+(r.amount||0)+(t.maintenance||0);return "\u26A1 *MONTHLY BILL \u2013 "+mn.toUpperCase()+"*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83D\uDC64 "+t.name+"\n\uD83C\uDFE0 "+(t.flat_type||"")+" \u00B7 "+(t.floor||"")+"\n\uD83D\uDCDF Meter: "+(t.meter_number||"\u2014")+"\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83C\uDFE0 Rent: "+fI(t.rent)+"\n\u26A1 Electricity: "+fI(r.amount)+"\n   ("+r.opening_reading+"\u2192"+r.closing_reading+", "+r.units+"u @\u20b9"+RATE+")"+(t.maintenance?"\n\uD83D\uDD27 Maint: "+fI(t.maintenance):"")+"\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83D\uDCB0 *TOTAL: "+fI(tot)+"*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\nPay via UPI by 5th. \uD83D\uDE4F\n*Rentro*";}
 
@@ -945,8 +962,7 @@ window.addEventListener("DOMContentLoaded", function() {
   // Action buttons
   document.getElementById("btn-addprop").onclick = function(){document.getElementById("mp").classList.add("show");};
   document.getElementById("btn-addtenant").onclick = showAddTenant;
-  document.getElementById("btn-rent-msg").onclick = function(){genMsgs("rent");};
-  document.getElementById("btn-elec-msg").onclick = function(){genMsgs("elec");};
+  document.getElementById("btn-rent-msg").onclick = function(){genMsgs("bill");};
   document.getElementById("btn-rcpt-msg").onclick = function(){genMsgs("receipt");};
   document.getElementById("ct-o").oninput = ctCalc;
   document.getElementById("ct-c").oninput = ctCalc;
