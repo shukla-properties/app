@@ -206,7 +206,32 @@ body{font-family:"Nunito",sans-serif;background:var(--bg);color:var(--ink);min-h
     </div>
     <div class="otab" id="ot-elec">
       <div class="ac">
-        <div class="sh">Latest Month</div>
+        <div class="sh">Enter Reading</div>
+        <div class="card">
+          <div class="field"><label>Select Tenant</label><select id="o-ct-t"><option value="">Choose tenant...</option></select></div>
+          <div class="field"><label>Month</label><input type="month" id="o-ct-m"></div>
+          <div class="fr">
+            <div class="field"><label>Opening Reading</label><input type="number" id="o-ct-o" placeholder="e.g. 5746"></div>
+            <div class="field"><label>Closing Reading</label><input type="number" id="o-ct-c" placeholder="e.g. 5995"></div>
+          </div>
+          <div class="cbox" id="o-ct-calc" style="display:none">
+            <div class="ci"><div class="cl">Units Used</div><div class="cv" id="o-ct-u">&mdash;</div></div>
+            <div class="ci"><div class="cl">Amount @&#x20B9;12/unit</div><div class="cv g" id="o-ct-a">&mdash;</div></div>
+          </div>
+          <button class="btn btn-gold" id="o-ct-sb">&#x26A1; Save Reading</button>
+          <div id="o-ct-sav" style="display:none" class="loading"><div class="spin"></div>Saving...</div>
+        </div>
+        <div id="o-ct-send" style="display:none">
+          <div class="sh">Send Bill</div>
+          <div class="card">
+            <div style="font-size:13px;color:var(--ink3);margin-bottom:10px">Bill ready for <strong id="o-ct-sn" style="color:var(--ink)"></strong></div>
+            <div class="wab" id="o-ct-wp"></div>
+            <a id="o-ct-wl" href="#" target="_blank" style="text-decoration:none">
+              <button class="btn btn-wa">Send on WhatsApp</button>
+            </a>
+          </div>
+        </div>
+        <div class="sh">Latest Month Summary</div>
         <div class="card" id="o-elec"><div class="loading"><div class="spin"></div></div></div>
         <div class="sh">History</div>
         <div id="o-ehist"></div>
@@ -287,19 +312,49 @@ body{font-family:"Nunito",sans-serif;background:var(--bg);color:var(--ink);min-h
   </div>
   <div class="ac" style="overflow-y:auto">
     <div id="tn-st"></div>
-    <div class="sh">Mark Payment</div>
+    <div class="sh">Pay Your Bill</div>
     <div class="card">
-      <div class="field"><label>Month</label><input type="month" id="tn-mo" readonly style="opacity:.7;cursor:not-allowed"></div>
       <div id="tn-bkd"></div>
-      <div class="field"><label>Amount Paid (&#x20B9;)</label><input type="number" id="tn-amt" placeholder="Enter amount"></div>
-      <div class="field"><label>Payment Mode</label><select id="tn-mode"><option>UPI</option><option>Cash</option><option>Bank Transfer</option></select></div>
-      <div class="field"><label>UPI / Reference No.</label><input type="text" id="tn-ref" placeholder="e.g. UTR12345678"></div>
-      <div class="field">
-        <label>Screenshot (optional)</label>
-        <div class="upbox" id="upbox-click"><input type="file" id="tn-ss" accept="image/*"><img class="upprev" id="tn-prev"><div id="tn-uph"><div style="font-size:22px;margin-bottom:5px">&#x1F4F8;</div><div style="font-size:11px;color:var(--ink3)">Tap to upload</div></div></div>
+
+      <!-- UPI Pay Now Section -->
+      <div id="tn-upi-section">
+        <div style="background:var(--bg);border-radius:12px;padding:14px;margin-bottom:14px">
+          <div style="font-size:11px;color:var(--ink3);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Pay via UPI</div>
+          <div style="font-size:12px;color:var(--ink2);margin-bottom:12px">Amount will be pre-filled. Pay using your preferred UPI app.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+            <button class="btn btn-gold" id="pay-gpay" style="padding:10px;font-size:12px;border-radius:10px">
+              <span style="font-size:16px">&#x1F4B8;</span> GPay
+            </button>
+            <button class="btn btn-out" id="pay-phonepe" style="padding:10px;font-size:12px;border-radius:10px;background:#5f259f;color:#fff;border:none">
+              <span style="font-size:16px">&#x1F4B3;</span> PhonePe
+            </button>
+            <button class="btn btn-out" id="pay-paytm" style="padding:10px;font-size:12px;border-radius:10px;background:#00BAF2;color:#fff;border:none">
+              <span style="font-size:16px">&#x1F4B1;</span> Paytm
+            </button>
+            <button class="btn btn-out" id="pay-any" style="padding:10px;font-size:12px;border-radius:10px">
+              <span style="font-size:16px">&#x1F4F1;</span> Any UPI
+            </button>
+          </div>
+          <div style="text-align:center;font-size:11px;color:var(--ink3)">
+            UPI ID: <strong style="color:var(--ink)">rhtshukla@ybl</strong>
+          </div>
+        </div>
       </div>
-      <button class="btn btn-gold" id="tn-pb">&#x2705; Confirm Payment</button>
-      <div id="tn-sav" style="display:none" class="loading"><div class="spin"></div>Saving...</div>
+
+      <!-- After payment mark section -->
+      <div style="border-top:1px solid var(--bdr);padding-top:14px;margin-top:4px">
+        <div style="font-size:12px;color:var(--ink3);margin-bottom:12px;text-align:center">After paying, confirm below:</div>
+        <div class="field"><label>Month</label><input type="month" id="tn-mo" readonly style="opacity:.7;cursor:not-allowed"></div>
+        <div class="field"><label>Amount Paid (&#x20B9;)</label><input type="number" id="tn-amt" placeholder="Enter amount"></div>
+        <div class="field"><label>Payment Mode</label><select id="tn-mode"><option>GPay</option><option>PhonePe</option><option>Paytm</option><option>UPI</option><option>Cash</option><option>Bank Transfer</option></select></div>
+        <input type="hidden" id="tn-ref" value="">
+        <div class="field">
+          <label>Screenshot (optional)</label>
+          <div class="upbox" id="upbox-click"><input type="file" id="tn-ss" accept="image/*"><img class="upprev" id="tn-prev"><div id="tn-uph"><div style="font-size:22px;margin-bottom:5px">&#x1F4F8;</div><div style="font-size:11px;color:var(--ink3)">Tap to upload</div></div></div>
+        </div>
+        <button class="btn btn-gold" id="tn-pb">&#x2705; I Have Paid — Confirm</button>
+        <div id="tn-sav" style="display:none" class="loading"><div class="spin"></div>Saving...</div>
+      </div>
     </div>
     <div class="sh">Electricity Bills</div>
     <div class="card" id="tn-elec"><div class="loading"><div class="spin"></div></div></div>
@@ -365,6 +420,13 @@ body{font-family:"Nunito",sans-serif;background:var(--bg);color:var(--ink);min-h
     <div class="fr">
       <div class="field"><label>Move-in Date</label><input type="date" id="tmi"></div>
       <div class="field"><label>Agreement End</label><input type="date" id="tae"></div>
+    </div>
+    <div class="field">
+      <label>Electricity Payment</label>
+      <select id="t-elec-mode">
+        <option value="0">Owner collects (added to rent bill)</option>
+        <option value="1">Tenant pays MSEDCL directly</option>
+      </select>
     </div>
     <div class="alert aw" style="margin-bottom:12px" id="mt-pass-note">
       <span class="aicon">&#x1F511;</span>
@@ -549,11 +611,12 @@ function rTenants() {
       if (t.deposit) pills += '<span class="pill pgray">Dep: '+fI(t.deposit)+'</span> ';
       if (t.maintenance) pills += '<span class="pill pb">+₹'+t.maintenance+' maint</span> ';
       if (t.agreement_end) pills += '<span class="pill '+(dT(t.agreement_end)<=30?"pr":"pg")+'">'+dT(t.agreement_end)+'d left</span>';
+      var elecMode = t.tenant_pays_electricity ? '<span class="pill pgold">&#x26A1; Tenant pays MSEDCL</span>' : '<span class="pill pb">&#x26A1; Owner collects</span>';
       card.innerHTML = '<div style="display:flex;align-items:center;gap:11px">'
         + '<div style="width:40px;height:40px;border-radius:12px;background:#eef4fb;color:#2d6a9f;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;flex-shrink:0">'+t.name[0]+'</div>'
         + '<div style="flex:1"><div style="font-size:13px;font-weight:700">'+t.name+'</div>'
         + '<div style="font-size:11px;color:var(--ink3)">'+(t.flat_type||"")+' · '+(t.floor||"")+' · '+(t.phone||'—')+'</div>'
-        + '<div style="margin-top:4px;display:flex;gap:5px;flex-wrap:wrap">'+pills+'</div></div>'
+        + '<div style="margin-top:4px;display:flex;gap:5px;flex-wrap:wrap">'+pills+' '+elecMode+'</div></div>'
         + '<div style="font-family:Playfair Display,serif;font-size:17px;color:var(--green)">'+fI(t.rent)+'</div>'
         + '</div>'
         + '<div style="display:flex;gap:8px;margin-top:10px;border-top:1px solid var(--bdr);padding-top:10px">'
@@ -603,7 +666,7 @@ function oTab(tab) {
   document.querySelectorAll(".otab").forEach(function(t){t.classList.remove("active");});
   document.querySelectorAll(".onb").forEach(function(b){b.classList.remove("active");});
   g("ot-"+tab).classList.add("active"); g("nav-"+tab).classList.add("active");
-  if(tab==="elec") rElec(); if(tab==="pnl") rPnL(); if(tab==="msg") genMsgs("bill");
+  if(tab==="elec") { rElec(); initOwnerElec(); } if(tab==="pnl") rPnL(); if(tab==="msg") genMsgs("bill");
 }
 
 function confPay(pid) {
@@ -670,10 +733,12 @@ function genMsgs(type) {
 
 function bBill(t,r,mn){
   var prop=_props.find(function(p){return p.id===t.property_id;})||{};
-  var elecLine=r?"\n\u26A1 Electricity:   "+fI(r.amount)+"\n   ("+r.opening_reading+"\u2192"+r.closing_reading+", "+r.units+"u @\u20b9"+RATE+")":"";
+  var includeElec = !t.tenant_pays_electricity;
+  var elecLine=(r&&includeElec)?"\n\u26A1 Electricity:   "+fI(r.amount)+"\n   ("+r.opening_reading+"\u2192"+r.closing_reading+", "+r.units+"u @\u20b9"+RATE+")":"";
+  var elecInfo=(r&&!includeElec)?"\n\u26A1 Elec reading:  "+r.opening_reading+"\u2192"+r.closing_reading+" ("+r.units+"u) - Pay MSEDCL directly":"";
   var maintLine=t.maintenance?"\n\uD83D\uDD27 Maintenance:   "+fI(t.maintenance):"";
-  var total=(t.rent||0)+(r&&r.amount||0)+(t.maintenance||0);
-  return "\uD83D\uDCCB *MONTHLY BILL \u2013 "+mn.toUpperCase()+"*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83C\uDFE2 "+(prop.name||"")+"\n\uD83D\uDC64 "+t.name+"\n\uD83C\uDFE0 "+(t.flat_type||"")+" \u00b7 "+(t.floor||"")+"\n\uD83D\uDCDF Meter: "+(t.meter_number||"\u2014")+"\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83C\uDFE0 Rent:          "+fI(t.rent||0)+elecLine+maintLine+"\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83D\uDCB0 *TOTAL DUE: "+fI(total)+"*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\nPay via UPI by 5th. \uD83D\uDE4F\n*Rentro*";
+  var total=(t.rent||0)+(includeElec&&r?r.amount:0)+(t.maintenance||0);
+  return "\uD83D\uDCCB *MONTHLY BILL \u2013 "+mn.toUpperCase()+"*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83C\uDFE2 "+(prop.name||"")+"\n\uD83D\uDC64 "+t.name+"\n\uD83C\uDFE0 "+(t.flat_type||"")+" \u00b7 "+(t.floor||"")+"\n\uD83D\uDCDF Meter: "+(t.meter_number||"\u2014")+"\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83C\uDFE0 Rent:          "+fI(t.rent||0)+elecLine+elecInfo+maintLine+"\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\uD83D\uDCB0 *TOTAL DUE: "+fI(total)+"*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\nPay via UPI by 5th. \uD83D\uDE4F\n*Rentro*";
 }
 
 function loadNotifs(){
@@ -719,7 +784,7 @@ function saveTenant(){
   g("t-sb").style.display="none"; g("t-sav").style.display="flex"; g("t-res").innerHTML="";
   sbReg(em,"Tenant@1234").catch(function(){return null;}).then(function(ad){
     var uid=ad&&ad.user&&ad.user.id;
-    return api("/rest/v1/tenants",{method:"POST",body:JSON.stringify({owner_id:_u.id,property_id:pid,user_id:uid||null,name:n,phone:ph,email:em,flat_type:g("tft").value,floor:g("tfl").value,rent:r,maintenance:+g("tm").value||0,deposit:+g("td").value||0,meter_number:g("tme").value,move_in_date:g("tmi").value||null,agreement_end:g("tae").value||null})}).then(function(tn){
+    return api("/rest/v1/tenants",{method:"POST",body:JSON.stringify({owner_id:_u.id,property_id:pid,user_id:uid||null,name:n,phone:ph,email:em,flat_type:g("tft").value,floor:g("tfl").value,rent:r,maintenance:+g("tm").value||0,deposit:+g("td").value||0,meter_number:g("tme").value,move_in_date:g("tmi").value||null,agreement_end:g("tae").value||null,tenant_pays_electricity:g("t-elec-mode").value==="1"})}).then(function(tn){
       if(uid){ api("/rest/v1/users",{method:"POST",body:JSON.stringify({id:uid,full_name:n,role:"tenant",tenant_id:tn&&tn[0]&&tn[0].id,phone:ph})}).catch(function(){}); }
       g("t-res").innerHTML='<div class="alert ai"><span class="aicon">&#x2705;</span><div class="abody"><strong>'+n+'</strong> added!<br>getrentro.in | '+em+' | Tenant@1234</div></div>';
       toast("Tenant added!"); renderOwner();
@@ -731,7 +796,7 @@ function saveTenant(){
 function updateTenant(tid){
   var r=+g("tr").value; if(!r){toast("Rent amount required");return;}
   g("t-sb").style.display="none"; g("t-sav").style.display="flex";
-  api("/rest/v1/tenants?id=eq."+tid,{method:"PATCH",body:JSON.stringify({name:g("tn2").value.trim(),phone:g("tph").value.trim(),flat_type:g("tft").value,floor:g("tfl").value,rent:r,maintenance:+g("tm").value||0,deposit:+g("td").value||0,meter_number:g("tme").value,move_in_date:g("tmi").value||null,agreement_end:g("tae").value||null})})
+  api("/rest/v1/tenants?id=eq."+tid,{method:"PATCH",body:JSON.stringify({name:g("tn2").value.trim(),phone:g("tph").value.trim(),flat_type:g("tft").value,floor:g("tfl").value,rent:r,maintenance:+g("tm").value||0,deposit:+g("td").value||0,meter_number:g("tme").value,move_in_date:g("tmi").value||null,agreement_end:g("tae").value||null,tenant_pays_electricity:g("t-elec-mode").value==="1"})})
     .then(function(){ closeModal("mt"); toast("Tenant updated!"); renderOwner(); })
     .catch(function(e){toast("Error: "+e.message);})
     .finally(function(){g("t-sb").style.display="flex";g("t-sav").style.display="none";});
@@ -836,6 +901,7 @@ function tnQuery(){
 window.addEventListener("DOMContentLoaded", function(){
   g("ct-m").value = cYM();
   g("tn-mo").value = cYM();
+  initUpiButtons();
 
   g("tab-login").onclick = function(){ swAuth("login"); };
   g("tab-reg").onclick = function(){ swAuth("reg"); };
