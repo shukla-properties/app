@@ -966,7 +966,7 @@ window.addEventListener("DOMContentLoaded", function(){
     try{
       _s=JSON.parse(rs);_u=JSON.parse(ru);_tid=rt;
       if(_u.role==="owner"){showSc("so");renderOwner();}
-      else if(_u.role==="caretaker"){showSc("sct");renderCT();}
+      else if(_u.role==="caretaker"){showSc("so");renderOwner();}
       else{showSc("stn");renderTN();}
     }catch(e){["rs","ru","rt"].forEach(function(k){localStorage.removeItem(k);});}
   }
