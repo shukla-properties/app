@@ -635,7 +635,7 @@ function rElec() {
     var tot = rows.reduce(function(s,r){return s+(r.amount||0);},0);
     g("o-elec").innerHTML = rows.length
       ? '<div style="display:flex;justify-content:space-between;margin-bottom:10px"><span style="font-size:13px;color:var(--ink3)">'+fM(ym)+'</span><span style="font-family:Playfair Display,serif;font-size:17px;color:var(--green)">'+fI(tot)+'</span></div>'
-        + rows.map(function(r){var t=_tenants.find(function(x){return x.id===r.tenant_id;})||{};return '<div class="rrow"><div><div class="rm">'+(t.name||r.tenant_id)+'</div><div class="rd">'+r.opening_reading+'→'+r.closing_reading+' · '+r.units+'u</div></div><div class="ra">'+fI(r.amount)+'</div></div>';}).join("")
+        + rows.map(function(r){var t=_tenants.find(function(x){return x.id===r.tenant_id;})||{};return '<div class="rrow"><div><div class="rm">'+(t.name||r.tenant_id)+'</div><div class="rd">'+r.opening_reading+'→'+r.closing_reading+' · '+r.units+'u</div></div><div style="display:flex;align-items:center;gap:8px"><div class="ra">'+fI(r.amount)+'</div><button class="btn btn-out btn-sm" style="padding:4px 8px;font-size:10px" data-action="edit-reading" data-id="'+r.id+'" data-tenant="'+(t.name||r.tenant_id)+'" data-open="'+r.opening_reading+'" data-close="'+r.closing_reading+'" data-month="'+r.month+'">Edit</button></div></div>';}).join("")
       : "<div class='empty'><div class='eico'>&#x26A1;</div>No readings this month</div>";
     return api("/rest/v1/electricity_readings?select=*&order=month.desc&limit=50");
   }).then(function(all){
@@ -1125,6 +1125,51 @@ function initUpiButtons() {
   });
 }
 
+
+// EDIT READING
+function openEditReading(id, tenant, open, close, month) {
+  document.getElementById("mr-id").value = id;
+  document.getElementById("mr-sub").textContent = "Update reading for " + tenant;
+  document.getElementById("mr-month").value = month;
+  document.getElementById("mr-open").value = open;
+  document.getElementById("mr-close").value = close;
+  mrCalc();
+  document.getElementById("mr").classList.add("show");
+}
+
+function mrCalc() {
+  var o = +document.getElementById("mr-open").value||0;
+  var c = +document.getElementById("mr-close").value||0;
+  if (c > o) {
+    var u=c-o, a=u*12;
+    document.getElementById("mr-units").textContent = u + " units";
+    document.getElementById("mr-amt").textContent = fI(a);
+    document.getElementById("mr-calc").style.display = "flex";
+  } else {
+    document.getElementById("mr-calc").style.display = "none";
+  }
+}
+
+function saveEditReading() {
+  var id = document.getElementById("mr-id").value;
+  var o = +document.getElementById("mr-open").value;
+  var c = +document.getElementById("mr-close").value;
+  if (!id||!c||c<=o) { toast("Closing must be greater than opening"); return; }
+  document.getElementById("mr-sb").style.display = "none";
+  document.getElementById("mr-sav").style.display = "flex";
+  api("/rest/v1/electricity_readings?id=eq."+id, {
+    method: "PATCH",
+    body: JSON.stringify({opening_reading:o, closing_reading:c})
+  }).then(function(){
+    document.getElementById("mr").classList.remove("show");
+    toast("Reading updated!");
+    rElec();
+  }).catch(function(e){ toast("Error: "+e.message); })
+  .finally(function(){
+    document.getElementById("mr-sb").style.display = "flex";
+    document.getElementById("mr-sav").style.display = "none";
+  });
+}
 </script>
 <script>
 if ('serviceWorker' in navigator) {
@@ -1134,5 +1179,25 @@ if ('serviceWorker' in navigator) {
       .catch(function(err){ console.log('SW failed:', err); });
   });
 }
-</script></body>
+</script>
+<div class="mover" id="mr">
+  <div class="modal">
+    <button class="mclose" id="close-mr">&#x2715;</button>
+    <div class="mtitle">Edit Reading</div>
+    <div class="msub" id="mr-sub">Update meter reading</div>
+    <input type="hidden" id="mr-id">
+    <div class="field"><label>Month</label><input type="month" id="mr-month" readonly style="opacity:.7"></div>
+    <div class="fr">
+      <div class="field"><label>Opening Reading</label><input type="number" id="mr-open" placeholder="e.g. 5746"></div>
+      <div class="field"><label>Closing Reading</label><input type="number" id="mr-close" placeholder="e.g. 5995"></div>
+    </div>
+    <div class="cbox" id="mr-calc" style="display:none">
+      <div class="ci"><div class="cl">Units</div><div class="cv" id="mr-units">&mdash;</div></div>
+      <div class="ci"><div class="cl">Amount @&#x20B9;12/unit</div><div class="cv g" id="mr-amt">&mdash;</div></div>
+    </div>
+    <button class="btn btn-gold" id="mr-sb">&#x1F4BE; Update Reading</button>
+    <div id="mr-sav" style="display:none" class="loading"><div class="spin"></div>Updating...</div>
+  </div>
+</div>
+</body>
 </html>
