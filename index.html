@@ -666,7 +666,7 @@ function oTab(tab) {
   document.querySelectorAll(".otab").forEach(function(t){t.classList.remove("active");});
   document.querySelectorAll(".onb").forEach(function(b){b.classList.remove("active");});
   g("ot-"+tab).classList.add("active"); g("nav-"+tab).classList.add("active");
-  if(tab==="elec") { rElec(); initOwnerElec(); } if(tab==="pnl") rPnL(); if(tab==="msg") genMsgs("bill");
+  if(tab==="elec") { rElec(); if(typeof initOwnerElec==="function") initOwnerElec(); } if(tab==="pnl") rPnL(); if(tab==="msg") genMsgs("bill");
 }
 
 function confPay(pid) {
@@ -1014,6 +1014,117 @@ window.addEventListener('appinstalled', function() {
   document.getElementById('install-banner').style.display = 'none';
   deferredPrompt = null;
 });
+</script>
+<script>
+// OWNER ELECTRICITY ENTRY
+var RATE = 12;
+var UPI_ID = "rhtshukla@ybl";
+var UPI_NAME = "Rohit Shukla";
+
+function initOwnerElec() {
+  var mEl = document.getElementById("o-ct-m");
+  if (!mEl) return;
+  mEl.value = cYM();
+  var sel = document.getElementById("o-ct-t");
+  if (!sel) return;
+  sel.innerHTML = "<option value=''>Choose tenant...</option>";
+  var grps = {};
+  _tenants.forEach(function(t){
+    var p = _props.find(function(x){return x.id===t.property_id;});
+    var pn = p ? p.name : "Other";
+    if (!grps[pn]) grps[pn] = [];
+    grps[pn].push(t);
+  });
+  Object.keys(grps).forEach(function(pn){
+    var gr = document.createElement("optgroup");
+    gr.label = "── " + pn + " ──";
+    grps[pn].forEach(function(t){
+      var o = document.createElement("option");
+      o.value = t.id;
+      o.textContent = t.name + " — " + (t.flat_type||"") + " " + (t.floor||"");
+      gr.appendChild(o);
+    });
+    sel.appendChild(gr);
+  });
+  document.getElementById("o-ct-o").oninput = ownerCtCalc;
+  document.getElementById("o-ct-c").oninput = ownerCtCalc;
+  document.getElementById("o-ct-sb").onclick = ownerCtSave;
+}
+
+function ownerCtCalc() {
+  var oEl = document.getElementById("o-ct-o");
+  var cEl = document.getElementById("o-ct-c");
+  if (!oEl || !cEl) return;
+  var o = +oEl.value||0, c = +cEl.value||0;
+  if (c > o) {
+    var u=c-o, a=u*RATE;
+    document.getElementById("o-ct-u").textContent = u + " units";
+    document.getElementById("o-ct-a").textContent = fI(a);
+    document.getElementById("o-ct-calc").style.display = "flex";
+  } else {
+    document.getElementById("o-ct-calc").style.display = "none";
+  }
+}
+
+function ownerCtSave() {
+  var tid = document.getElementById("o-ct-t").value;
+  var mo = document.getElementById("o-ct-m").value;
+  var o = +document.getElementById("o-ct-o").value;
+  var c = +document.getElementById("o-ct-c").value;
+  if (!tid||!mo||!c||c<=o) { toast("Fill all fields correctly"); return; }
+  document.getElementById("o-ct-sb").style.display = "none";
+  document.getElementById("o-ct-sav").style.display = "flex";
+  api("/rest/v1/electricity_readings",{method:"POST",headers:{"Prefer":"resolution=merge-duplicates"},body:JSON.stringify({tenant_id:tid,month:mo,opening_reading:o,closing_reading:c})})
+    .then(function(){
+      var t = _tenants.find(function(x){return x.id===tid;})||{};
+      var u=c-o, a=u*RATE;
+      var msg = bBill(t,{opening_reading:o,closing_reading:c,units:u,amount:a},fM(mo));
+      document.getElementById("o-ct-sn").textContent = t.name||"Tenant";
+      document.getElementById("o-ct-wp").textContent = msg;
+      document.getElementById("o-ct-wl").href = "https://wa.me/91"+(t.phone||"").replace(/D/g,"")+"?text="+encodeURIComponent(msg);
+      document.getElementById("o-ct-send").style.display = "block";
+      document.getElementById("o-ct-t").value="";
+      document.getElementById("o-ct-o").value="";
+      document.getElementById("o-ct-c").value="";
+      document.getElementById("o-ct-calc").style.display="none";
+      rElec(); toast("Reading saved!");
+    }).catch(function(e){toast("Error: "+e.message);})
+    .finally(function(){
+      document.getElementById("o-ct-sb").style.display="flex";
+      document.getElementById("o-ct-sav").style.display="none";
+    });
+}
+
+// UPI PAYMENT
+function getUpiUrl(app, amount, month) {
+  var ref = "RENTRO" + Date.now().toString().slice(-6);
+  var note = "Rent " + month;
+  var refField = document.getElementById("tn-ref");
+  if (refField) refField.value = ref;
+  if (app === "gpay") return "gpay://upi/pay?pa=" + UPI_ID + "&pn=" + encodeURIComponent(UPI_NAME) + "&am=" + amount + "&cu=INR&tn=" + encodeURIComponent(note);
+  if (app === "phonepe") return "phonepe://pay?pa=" + UPI_ID + "&pn=" + encodeURIComponent(UPI_NAME) + "&am=" + amount + "&cu=INR&tn=" + encodeURIComponent(note);
+  if (app === "paytm") return "paytmmp://upi/pay?pa=" + UPI_ID + "&pn=" + encodeURIComponent(UPI_NAME) + "&am=" + amount + "&cu=INR&tn=" + encodeURIComponent(note);
+  return "upi://pay?pa=" + UPI_ID + "&pn=" + encodeURIComponent(UPI_NAME) + "&am=" + amount + "&cu=INR&tn=" + encodeURIComponent(note);
+}
+
+function initUpiButtons() {
+  var apps = ["gpay","phonepe","paytm","any"];
+  var modeMap = {"gpay":"GPay","phonepe":"PhonePe","paytm":"Paytm","any":"UPI"};
+  apps.forEach(function(app) {
+    var btn = document.getElementById("pay-" + app);
+    if (!btn) return;
+    btn.addEventListener("click", function() {
+      var amt = document.getElementById("tn-amt").value || "0";
+      var mo = document.getElementById("tn-mo").value;
+      var url = getUpiUrl(app, amt, fM(mo));
+      var modeSelect = document.getElementById("tn-mode");
+      if (modeSelect) modeSelect.value = modeMap[app];
+      window.location.href = url;
+      setTimeout(function() { toast("After paying, tap Confirm!"); }, 1500);
+    });
+  });
+}
+
 </script>
 <script>
 if ('serviceWorker' in navigator) {
