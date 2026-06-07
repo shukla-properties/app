@@ -726,7 +726,7 @@ function oTab(tab) {
   document.querySelectorAll(".onb").forEach(function(b){b.classList.remove("active");});
   g("ot-"+tab).classList.add("active"); g("nav-"+tab).classList.add("active");
   if(tab==="elec") { rElec(); if(typeof initOwnerElec==="function") initOwnerElec(); }
-  if(tab==="settings") { loadSettings(); } if(tab==="pnl") rPnL(); if(tab==="msg") genMsgs("bill");
+  if(tab==="settings") { if(typeof loadSettings==="function") loadSettings(); } if(tab==="pnl") rPnL(); if(tab==="msg") genMsgs("bill");
 }
 
 function confPay(pid) {
